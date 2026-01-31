@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webm Looper</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d0d0d;
+            --card-bg: #1c1c1e;
+            --text-primary: #ffffff;
+            --text-secondary: #a1a1aa;
+            --accent: #6d28d9;
+            /* Deep Purple */
+            --accent-glow: rgba(109, 40, 217, 0.4);
+            --accent-hover: #5b21b6;
+            --danger: #ef4444;
+
+            --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+
+            --radius-md: 12px;
+            --radius-lg: 20px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: var(--font-family);
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            padding: var(--spacing-md);
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 480px;
+            /* Mobile width constraint */
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-lg);
+        }
+
+        header {
+            text-align: center;
+            padding-top: var(--spacing-md);
+        }
+
+        h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 500;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .subtext {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        /* Utilities */
+        .hidden {
+            display: none !important;
+        }
+
+        .stage {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Upload Stage */
+        .upload-card {
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-xl);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .icon-box {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: var(--spacing-lg);
+            color: var(--accent);
+        }
+
+        .primary-btn {
+            background-color: var(--text-primary);
+            color: var(--bg-color);
+            border: none;
+            border-radius: 50px;
+            padding: 14px 32px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+        }
+
+        .primary-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* Player Stage */
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            background: #000;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            margin-bottom: var(--spacing-lg);
+            aspect-ratio: 16/9;
+            /* Default aspect, adjusts to video */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .overlay-play-btn {
+            position: absolute;
+            width: 64px;
+            height: 64px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            /* Let clicks pass through to video/wrapper logic if needed, but we handle logic via JS */
+            opacity: 0;
+            transition: opacity 0.2s;
+            backdrop-filter: blur(4px);
+        }
+
+        /* Show play overlay when paused */
+        .video-wrapper.paused .overlay-play-btn {
+            opacity: 1;
+        }
+
+        .controls-container {
+            background: var(--card-bg);
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-lg);
+        }
+
+        /* Progress Bar */
+        .progress-area {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--text-primary);
+            border-radius: 50%;
+            border: 2px solid var(--card-bg);
+            /* Halo effect */
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .time-display {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: var(--spacing-sm);
+            font-feature-settings: "tnum";
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Buttons */
+        .buttons-area {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: var(--spacing-xl);
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: none;
+            color: var(--text-primary);
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .control-btn:active {
+            transform: scale(0.92);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .control-btn.secondary {
+            width: 40px;
+            height: 40px;
+            color: var(--text-secondary);
+            background: transparent;
+        }
+
+        .control-btn.loop-btn {
+            position: relative;
+        }
+
+        /* Loop Active State */
+        .control-btn.loop-btn.active {
+            color: var(--accent);
+            background: rgba(109, 40, 217, 0.15);
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        .control-btn.loop-btn.active svg {
+            filter: drop-shadow(0 0 2px var(--accent));
+        }
+
+        @media (min-width: 600px) {
+            .app-container {
+                max-width: 600px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <header>
+            <h1>Webm Looper</h1>
+        </header>
+
+        <main>
+            <!-- File Selection Stage -->
+            <div id="upload-stage" class="stage active">
+                <div class="upload-card">
+                    <div class="icon-box">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M12 16.5V9.75M12 9.75L8.25 13.5M12 9.75L15.75 13.5M3.75 12C3.75 7.44365 7.44365 3.75 12 3.75C16.5563 3.75 20.25 7.44365 20.25 12C20.25 16.5563 16.5563 20.25 12 20.25C7.44365 20.25 3.75 16.5563 3.75 12Z"
+                                stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <h2>ファイルを選択</h2>
+                    <p class="subtext">.webm ファイルをアップロード</p>
+                    <button id="select-btn" class="primary-btn">ファイルを開く</button>
+                    <input type="file" id="file-input" accept="video/*" hidden>
+                </div>
+            </div>
+
+            <!-- Player Stage -->
+            <div id="player-stage" class="stage hidden">
+                <div class="video-wrapper">
+                    <video id="main-video" playsinline></video>
+                    <!-- Overlay Play Button -->
+                    <div id="overlay-play" class="overlay-play-btn">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8 5V19L19 12L8 5Z" />
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="controls-container">
+                    <div class="progress-area">
+                        <input type="range" id="seek-bar" min="0" value="0" step="0.1">
+                        <div class="time-display">
+                            <span id="current-time">0:00</span>
+                            <span id="duration">0:00</span>
+                        </div>
+                    </div>
+
+                    <div class="buttons-area">
+                        <button id="play-pause-btn" class="control-btn" aria-label="再生/一時停止">
+                            <svg class="icon-play" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M8 5V19L19 12L8 5Z" />
+                            </svg>
+                            <svg class="icon-pause hidden" width="24" height="24" viewBox="0 0 24 24"
+                                fill="currentColor">
+                                <path d="M6 19H10V5H6V19ZM14 5V19H18V5H14Z" />
+                            </svg>
+                        </button>
+
+                        <button id="loop-btn" class="control-btn loop-btn" aria-label="ループ再生">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M17 1l4 4-4 4"></path>
+                                <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                                <path d="M7 23l-4-4 4-4"></path>
+                                <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+                            </svg>
+                        </button>
+
+                        <button id="reset-file-btn" class="control-btn secondary" aria-label="別のファイル">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Elements
+            const uploadStage = document.getElementById('upload-stage');
+            const playerStage = document.getElementById('player-stage');
+
+            const selectBtn = document.getElementById('select-btn');
+            const fileInput = document.getElementById('file-input');
+
+            const video = document.getElementById('main-video');
+            const videoWrapper = document.querySelector('.video-wrapper');
+            const playPauseBtn = document.getElementById('play-pause-btn');
+            const iconPlay = document.querySelector('.icon-play');
+            const iconPause = document.querySelector('.icon-pause');
+
+            const loopBtn = document.getElementById('loop-btn');
+            const resetBtn = document.getElementById('reset-file-btn');
+
+            const seekBar = document.getElementById('seek-bar');
+            const currentTimeEl = document.getElementById('current-time');
+            const durationEl = document.getElementById('duration');
+
+            // State
+            let isDragging = false;
+            let videoUrl = null;
+
+            // --- Upload Logic ---
+            selectBtn.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    loadVideo(file);
+                }
+            });
+
+            function loadVideo(file) {
+                if (videoUrl) URL.revokeObjectURL(videoUrl); // Cleanup
+                videoUrl = URL.createObjectURL(file);
+                video.src = videoUrl;
+
+                // Reset states
+                video.loop = false; // Default off, or adhere to UI state? let's sync to UI
+                updateLoopUI(); // Ensure UI matches state (initially off)
+
+                // Show player
+                uploadStage.classList.remove('active');
+                uploadStage.classList.add('hidden');
+                playerStage.classList.remove('hidden');
+                playerStage.classList.add('active');
+
+                // Initial play
+                video.play().then(() => {
+                    updatePlayPauseUI();
+                })
+                    .catch(err => {
+                        console.log("Auto-play prevented", err);
+                        updatePlayPauseUI();
+                    });
+            }
+
+            // --- Player Logic ---
+            function togglePlay() {
+                if (video.paused) {
+                    video.play();
+                } else {
+                    video.pause();
+                }
+            }
+
+            playPauseBtn.addEventListener('click', togglePlay);
+            videoWrapper.addEventListener('click', togglePlay); // Tap video to play/pause
+
+            video.addEventListener('play', updatePlayPauseUI);
+            video.addEventListener('pause', updatePlayPauseUI);
+
+            function updatePlayPauseUI() {
+                if (video.paused) {
+                    iconPlay.classList.remove('hidden');
+                    iconPause.classList.add('hidden');
+                    videoWrapper.classList.add('paused');
+                } else {
+                    iconPlay.classList.add('hidden');
+                    iconPause.classList.remove('hidden');
+                    videoWrapper.classList.remove('paused');
+                }
+            }
+
+            // --- Loop Logic ---
+            loopBtn.addEventListener('click', () => {
+                video.loop = !video.loop;
+                updateLoopUI();
+            });
+
+            function updateLoopUI() {
+                if (video.loop) {
+                    loopBtn.classList.add('active');
+                } else {
+                    loopBtn.classList.remove('active');
+                }
+            }
+
+            // --- Seek & Time Logic ---
+            video.addEventListener('loadedmetadata', () => {
+                seekBar.max = video.duration;
+                durationEl.textContent = formatTime(video.duration);
+            });
+
+            video.addEventListener('timeupdate', () => {
+                if (!isDragging) {
+                    seekBar.value = video.currentTime;
+                    currentTimeEl.textContent = formatTime(video.currentTime);
+                }
+            });
+
+            seekBar.addEventListener('input', () => {
+                isDragging = true;
+                currentTimeEl.textContent = formatTime(seekBar.value);
+            });
+
+            seekBar.addEventListener('change', () => {
+                isDragging = false;
+                video.currentTime = seekBar.value;
+            });
+
+            // Helper
+            function formatTime(seconds) {
+                if (!seconds || isNaN(seconds)) return "0:00";
+                const m = Math.floor(seconds / 60);
+                const s = Math.floor(seconds % 60);
+                return `${m}:${s.toString().padStart(2, '0')}`;
+            }
+
+            // --- Cleanup / Reset ---
+            resetBtn.addEventListener('click', () => {
+                video.pause();
+                video.src = "";
+                fileInput.value = ""; // clear input
+
+                playerStage.classList.remove('active');
+                playerStage.classList.add('hidden');
+                uploadStage.classList.remove('hidden');
+                uploadStage.classList.add('active');
+            });
+        });
+    </script>
+</body>
+
+</html>
