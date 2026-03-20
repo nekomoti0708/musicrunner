@@ -44,66 +44,79 @@ video {
 #controls {
     flex: 0 0 auto;
     background-color: #1e1e1e;
-    padding: 15px 20px;
-    padding-bottom: env(safe-area-inset-bottom, 20px);
+    padding: 10px 20px;
+    padding-bottom: env(safe-area-inset-bottom, 10px);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
-.progress-container {
+.control-row {
     display: flex;
     align-items: center;
-    gap: 15px;
-    margin-bottom: 15px;
+    gap: 12px;
+    width: 100%;
 }
 .time-display {
-    font-size: 0.9rem;
-    min-width: 45px;
+    font-size: 0.85rem;
+    min-width: 40px;
     text-align: center;
     font-variant-numeric: tabular-nums;
+    color: #aaa;
 }
 input[type="range"] {
     flex: 1;
     -webkit-appearance: none;
     background: transparent;
     margin: 0;
+    height: 30px;
 }
 input[type="range"]::-webkit-slider-runnable-track {
     width: 100%;
-    height: 6px;
+    height: 4px;
     background: #444;
-    border-radius: 3px;
+    border-radius: 2px;
 }
 input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    height: 18px;
-    width: 18px;
+    height: 20px;
+    width: 20px;
     border-radius: 50%;
     background: #3f51b5;
-    margin-top: -6px;
+    margin-top: -8px;
     cursor: pointer;
+    box-shadow: 0 0 4px rgba(0,0,0,0.5);
+}
+.volume-icon {
+    width: 20px;
+    height: 20px;
+    fill: #aaa;
+    flex-shrink: 0;
 }
 .buttons-container {
     display: flex;
     justify-content: space-around;
     align-items: center;
+    padding-top: 5px;
 }
 .control-btn {
     background: none;
     border: none;
     color: #e0e0e0;
     cursor: pointer;
-    padding: 10px;
+    padding: 8px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 .control-btn svg {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     fill: currentColor;
 }
 .play-btn svg {
-    width: 48px;
-    height: 48px;
+    width: 44px;
+    height: 44px;
 }
 .loop-active {
     color: #3f51b5;
@@ -113,11 +126,12 @@ input[type="range"]::-webkit-slider-thumb {
     color: white;
     border: none;
     padding: 15px 30px;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     border-radius: 30px;
     display: flex;
     align-items: center;
     gap: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
 }
 input[type="file"] {
     display: none;
@@ -142,11 +156,19 @@ input[type="file"] {
         <video id="videoElement" playsinline></video>
     </div>
     <div id="controls">
-        <div class="progress-container">
+        <div class="control-row">
             <span id="currentTime" class="time-display">0:00</span>
             <input type="range" id="progressBar" value="0" min="0" step="0.1">
             <span id="durationTime" class="time-display">0:00</span>
         </div>
+        
+        <div class="control-row">
+            <svg class="volume-icon" viewBox="0 0 24 24">
+                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+            </svg>
+            <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="1">
+        </div>
+
         <div class="buttons-container">
             <button class="control-btn" id="changeVideoBtn">
                 <svg viewBox="0 0 24 24">
@@ -179,6 +201,7 @@ const playPauseBtn = document.getElementById('playPauseBtn');
 const playIcon = document.getElementById('playIcon');
 const pauseIcon = document.getElementById('pauseIcon');
 const progressBar = document.getElementById('progressBar');
+const volumeSlider = document.getElementById('volumeSlider');
 const currentTimeDisplay = document.getElementById('currentTime');
 const durationTimeDisplay = document.getElementById('durationTime');
 const loopBtn = document.getElementById('loopBtn');
@@ -265,6 +288,10 @@ video.addEventListener('timeupdate', () => {
 progressBar.addEventListener('input', () => {
     video.currentTime = progressBar.value;
     currentTimeDisplay.textContent = formatTime(video.currentTime);
+});
+
+volumeSlider.addEventListener('input', (e) => {
+    video.volume = e.target.value;
 });
 
 loopBtn.addEventListener('click', () => {
